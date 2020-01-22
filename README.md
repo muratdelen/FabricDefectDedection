@@ -1,332 +1,155 @@
-# FabricDefectDedection
-Python Code - TensorFlow
+Abstract—Fabric defect classification is traditionally achieved by human visual examination, which is inefficient and labor-intensive. Therefore, using intelligent and automated methods to solve this problem has become a hot research topic. With the increasing diversity of fabric defects, it is urgent to design effective methods to classify defects with a higher accuracy, which can contribute to ensuring the fabric products' quality. A fabric inspection system is a specialized computer vision system used to detect fabric defects for quality assurance. In this paper, a convolution neural networks algorithm was developed for an on-loom fabric defect inspection system by combining the techniques of image pre-processing, fabric motif determination, candidate defect map generation, and convolutional neural networks (CNNs).
 
-import os
-from shutil import copyfile
-import cv2
+Keywords—fabric defect estimation, tensorflow, convolutional neural network, classification
 
-from numpy import save, load
-from random import seed, random
+I.Introduction
+In the textile industry, fabric defects represent an important problem in the quality control of textile manufacturing. Fabric defect detection and classification are the main methods used to ensure the quality of the fabric. Fabric defect classification is a vitally important process in the fabric quality evaluation, which can provide the defect information needed to adjust the machines and improve the processing technology. In the field of computer vision, the study of fabric defects has been a hot topic. Conventionally, fabric defects are evaluated by visual inspections of trained workers in accordance with human-made classification standards. Fabric defect classification remains a research issue and faces some difficulties due to the following three reasons. Firstly, new classes of fabric defects may be introduced with the growing application of fabric. Secondly, the similarities among different classes of fabric defects and the intraclass diversities of fabric defects make their discriminations challenging. Finally, different fibers, patterns and organizations of fabrics also make defect classification difficult.
 
-from matplotlib import pyplot
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Flatten
-from keras.optimizers import SGD, Adam
-from keras.preprocessing.image import ImageDataGenerator
+II.Neural networks
+A.Convolutional Neural Networks
 
-from keras.models import model_from_json
-from keras.models import load_model
-from keras.preprocessing import image
-import numpy as np
-##---------------------------------------------------------------------------------------------------------------------------------------------
-# FOLDER INFORMATION
-##---------------------------------------------------------------------------------------------------------------------------------------------
-dataSetFolder = "dataset/"
-dataSetOrginalFolder = dataSetFolder + "original/"
-dataSetTrain = dataSetFolder + "train/"
-dataSetTest = dataSetFolder + "test/"
-dataSetNoDefectFolder = dataSetOrginalFolder + "NODefect_images/"
-dataSetDefectFolder = dataSetOrginalFolder + "Defect_images/"
-dataSetTestRatio = 0.25
-print(os.listdir(dataSetFolder))
-#image resize
-imageHeight = 224 #25
-imageWidth = 224 #400
-# dateset categories
-Categories = ["Defect","NoDefect"]
-#epochs times
-Epochs = 100
-#tensorflow CNN model
-model = Sequential()
+Fig. 1. A simple convolutional neural networks
 
-##---------------------------------------------------------------------------------------------------------------------------------------------
-# IMAGES INFORMATION AND PREPARE DATASET FROM ONE FOLDER OR TWO FOLDER
-##---------------------------------------------------------------------------------------------------------------------------------------------
-"""
-showImages function show image to analyzed.
-can be change image size
-"""
-#showImages(dataSetNoDefectFolder,100,20)
-#showImages(dataSetNoDefectFolder)
-#showImages(dataSetDefectFolder)
-def showImages(image_folder, img_width=None, img_height=None):
-	i = 0
-	pyplot.figure(image_folder)
-	for image_full_name in os.listdir(image_folder):
-		filename = image_folder + image_full_name
-		image_data = cv2.imread(filename)
-		if img_width != None and img_height != None:
-			image_data = cv2.resize(image_data,(img_width, img_height))
-		pyplot.subplot(330 + 1 + i)
-		pyplot.title(image_full_name)
-		pyplot.imshow(image_data,)
-		i += 1
-		if(i == 9):break
-	# show the figure
-	pyplot.show()
+In deep learning, a convolutional neural network (CNN, or ConvNet) is a class of deep neural networks, most commonly applied to analyzing visual imagery. They are also known as shift invariant or space invariant artificial neural networks (SIANN), based on their shared-weights architecture and translation invariance characteristics. They have applications in image and video recognition, recommender systems, image classification, medical image analysis, and natural language processing.
 
-"""
-prepareDataSetAsData function set train and test dataset as data from defined dataset images folder.
-data save as data_photos.npy and data_labels.npy 
-"""
-#prepareDataSet(dataSetNoDefectFolder,dataSetDefectFolder,200,200)
-def prepareDataSetAsData(img_folder, first_object_name, second_object_name, img_width=None, img_height=None):
-	print("Start to Prepare Dataset")
-	photos, labels = list(), list()
-	for image_full_name in os.listdir(img_folder):
-		filename = img_folder + image_full_name		
-		if image_full_name.startswith(first_object_name):
-			img_label = 0.0
-		elif image_full_name.startswith(second_object_name):
-			img_label = 1.0
-		else:
-			img_label = 0.0
-		image_data = cv2.imread(filename)
-		if img_width != None and img_height != None:
-			image_data = cv2.resize(image_data,(img_width, img_height))
-		photos.append(image_data)
-		labels.append(img_label)
-	save(dataSetFolder + "data_photos.npy",photos)
-	save(dataSetFolder + "data_labels.npy",labels)
-	print(photos.shape, labels.shape)
+CNNs are regularized versions of multilayer perceptrons. Multilayer perceptrons usually mean fully connected networks, that is, each neuron in one layer is connected to all neurons in the next layer. The "fully-connectedness" of these networks makes them prone to overfitting data. Typical ways of regularization include adding some form of magnitude measurement of weights to the loss function. CNNs take a different approach towards regularization: they take advantage of the hierarchical pattern in data and assemble more complex patterns using smaller and simpler patterns. Therefore, on the scale of connectedness and complexity, CNNs are on the lower extreme.
 
-"""
-prepareDataSetAsData2 function set train and test dataset as data from defined 2 dataset images folder.
-data save as data_photos.npy and data_labels.npy 
-"""
-#prepareDataSet2(dataSetNoDefectFolder,dataSetDefectFolder,200,200)
-def prepareDataSetAsData2(first_object_folder, second_object_folder, img_width=None, img_height=None):
-	print("Start to Prepare Dataset")
-	photos, labels = list(), list()
-	for image_full_name in os.listdir(first_object_folder):
-		filename = first_object_folder + image_full_name		
-		img_label = 0.0
-		image_data = cv2.imread(filename)
-		if img_width != None and img_height != None:
-			image_data = cv2.resize(image_data,(img_width, img_height))
-		photos.append(image_data)
-		labels.append(img_label)
-	for image_full_name in os.listdir(second_object_folder):
-		filename = second_object_folder + image_full_name		
-		img_label = 1.0
-		image_data = cv2.imread(filename)
-		if img_width != None and img_height != None:
-			image_data = cv2.resize(image_data,(img_width, img_height))
-		photos.append(image_data)
-		labels.append(img_label)
-	save(dataSetFolder + "data_photos.npy",photos)
-	save(dataSetFolder + "data_labels.npy",labels)
-	print(photos.shape, labels.shape)
+There are four main operations in the convolutional neural networks shown in Figure 1 above: Convolution, Non Linearity (ReLU), Pooling or Sub Sampling, Classification (Fully Connected Layer)
 
-"""
-prepareDataSetAsImage function set train and test dataset as image from defined dataset images folder.
-data save as data_photos.npy and data_labels.npy 
-"""
-#prepareDataSetAsImage(dataSetOrginalFolder,"cat","dog")
-def prepareDataSetAsImage(img_folder, first_object_name, second_object_name):
-	print("Start to Prepare Dataset")
-	# create directories
-	subdirs = ['train/', 'test/']
-	for subdir in subdirs:
-		# create label subdirectories
-		labeldirs = [first_object_name + "/", second_object_name + "/"]
-		for labldir in labeldirs:
-			newdir = dataSetFolder + subdir + labldir
-			os.makedirs(newdir, exist_ok=True)
-	# seed random number generator
-	seed(1)
-	# copy training dataset images into subdirectories
-	for image_full_name in os.listdir(img_folder):
-		filename = img_folder + image_full_name  
-		save_directory = dataSetFolder + "train/"
-		if random() < dataSetTestRatio :
-			save_directory = dataSetFolder + "test/"
-		if image_full_name.startswith(first_object_name):
-			save_directory += first_object_name + "/" + image_full_name
-		elif image_full_name.startswith(second_object_name):
-			save_directory += second_object_name + "/" + image_full_name
-		copyfile(filename,save_directory)
-	print("Finish Dataset")
+B.The Convolutional Neural Networks Step
+When programming a CNN, the input is a tensor with shape (number of images) x (image width) x (image height) x (image depth). Then after passing through a convolutional layer, the image becomes abstracted to a feature map, with shape (number of images) x (feature map width) x (feature map height) x (feature map channels). A convolutional layer within a neural network should have the following attributes:
 
-"""
-prepareDataSetAsImage function set train and test dataset as image from defined dataset images folder.
-data save as data_photos.npy and data_labels.npy 
-"""
-#prepareDataSetAsImage2("cat",dataSetCatFolder,"dog",dataSetDogFolder)
-def prepareDataSetAsImage2(first_object_name, first_object_folder, second_object_name, second_object_folder):
-	print("Start to Prepare Dataset")
-	# create directories
-	subdirs = ['train/', 'test/']
-	for subdir in subdirs:
-		# create label subdirectories
-		labeldirs = [first_object_name + "/", second_object_name + "/"]
-		for labldir in labeldirs:
-			newdir = dataSetFolder + subdir + labldir
-			os.makedirs(newdir, exist_ok=True)
-	# seed random number generator
-	seed(1)
-	# copy training dataset images into subdirectories
-	for image_full_name in os.listdir(first_object_folder):
-		filename = first_object_folder + image_full_name  
-		save_directory = dataSetFolder + "train/"	  
-		if random() < dataSetTestRatio :
-			save_directory = dataSetFolder + "test/"
-		save_directory += first_object_name + "/" + image_full_name
-		copyfile(filename,save_directory)
-	for image_full_name in os.listdir(second_object_folder):
-		filename = second_object_folder + image_full_name  
-		save_directory = dataSetFolder + "train/"	  
-		if random() < dataSetTestRatio :
-			save_directory = dataSetFolder + "test/"
-		save_directory += second_object_name + "/" + image_full_name
-		copyfile(filename,save_directory)
-	print("Finish Dataset")
+Convolutional kernels defined by a width and height (hyper-parameters). The number of input channels and output channels (hyper-parameter). The depth of the Convolution filter (the input channels) must be equal to the number channels (depth) of the input feature map.
 
-"""
-loadDatasetWithdata function load dataset from data
-"""
-def loadDatasetWithdata():
-	photos = load(dataSetFolder + "data_photos.npy")
-	labels = load(dataSetFolder + "data_labels.npy")
-	print(photos.shape,labels.shape)
-	return photos,labels
-##---------------------------------------------------------------------------------------------------------------------------------------------
-#  DEFINE MODEL AND START TRAIN THE MODEL
-##---------------------------------------------------------------------------------------------------------------------------------------------
-"""
-defineModel function defined model as CNN
-can be create model use tensorflow backend for special problems
-"""
-def defineModel():
-	## Feature Learning
-	#1.  block
-	model.add(Conv2D(32, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same', input_shape=(imageHeight, imageWidth, 3)))
-	model.add(MaxPooling2D((2, 2)))
-	#2.  block
-	model.add(Conv2D(64, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-	model.add(MaxPooling2D((2, 2)))
-	#3.  block
-	model.add(Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-	model.add(MaxPooling2D((2, 2)))
-	#4.  block
-	model.add(Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-	model.add(MaxPooling2D((2, 2)))
-	#5.  block
-	model.add(Conv2D(512, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-	model.add(MaxPooling2D((2, 2)))
-	#6.  block
-	model.add(Conv2D(1024, (3, 3), activation='relu', kernel_initializer='he_uniform', padding='same'))
-	model.add(MaxPooling2D((2, 2)))
+Every image can be considered as a matrix of pixel values. Consider a 5 x 5 image whose pixel values are only 0 and 1 (note that for a grayscale image, pixel values range from 0 to 255, the green matrix below is a special case where pixel values are only 0 and 1).
 
-	#model.add(Dropout(0.2))
-	## Classification
-	model.add(Flatten())
-	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))	
-	model.add(Dense(64, activation='relu', kernel_initializer='he_uniform'))	
-	model.add(Dense(32, activation='relu', kernel_initializer='he_uniform'))	 
-	#model.add(Dense(16, activation='relu', kernel_initializer='he_uniform'))
-	#model.add(Dense(8, activation='relu', kernel_initializer='he_uniform'))
-	#model.add(Dense(4, activation='relu', kernel_initializer='he_uniform'))
-	#model.add(Dense(2, activation='relu', kernel_initializer='he_uniform'))
-	#model.add(Dropout(0.5))
 
-	model.add(Dense(1, activation='sigmoid'))
-	#opt = SGD(lr=0.01, momentum=0.99)
-	opt = SGD(lr=0.0001, momentum=0.99)
-	#opt = SGD(lr=0.0001, decay=1e-4, momentum=0.9, nesterov=True)
-	#model.add(Dense(1, activation=K.exp))
-	#model.add(Dense(1, activation='relu', kernel_initializer='he_uniform'))
-	#opt=Adam(lr=0.01)
-	model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
-	model.summary()
-	return model
 
-"""
-Show train and test information
-"""
-def summarizeDiagnostics(info):
-	# plot loss
-	pyplot.subplot(211)
-	pyplot.title('Cross Entropy Loss')
-	pyplot.plot(info.history['loss'], color='blue', label='train')
-	pyplot.plot(info.history['val_loss'], color='orange', label='test')
-	# plot accuracy
-	pyplot.subplot(212)
-	pyplot.title('Classification Accuracy')
-	pyplot.plot(info.history['accuracy'], color='blue', label='train')
-	pyplot.plot(info.history['val_accuracy'], color='orange', label='test')
-	# save plot to file
-	pyplot.savefig('train_info_plot.png')
-	pyplot.close()
+Fig. 2. Pixel of image example
 
-"""
-after prepare model and dataset, started train.
-"""
-def runTrainTest():
-	# get model
-	model = defineModel()
-	# create data generator
-	train_datagen = ImageDataGenerator(rescale=1.0 / 255.0, width_shift_range=0.1, height_shift_range=0.1, horizontal_flip=True)
-	test_datagen = ImageDataGenerator(rescale=1.0 / 255.0)
-	# prepare iterators
-	train_it = train_datagen.flow_from_directory(dataSetTrain, class_mode='binary', batch_size=64, target_size=(imageHeight, imageWidth))
-	test_it = test_datagen.flow_from_directory(dataSetTest, class_mode='binary', batch_size=64, target_size=(imageHeight, imageWidth))
-	# fit model
-	print("Start Train")
-	history = model.fit_generator(train_it, steps_per_epoch=len(train_it), validation_data=test_it, validation_steps=len(test_it), epochs=Epochs, verbose=1)
-	# evaluate model
-	_, acc = model.evaluate_generator(test_it, steps=len(test_it), verbose=0)
-	print('Result>> %.3f' % (acc * 100.0))
-	# serialize weights to HDF5
-	model_json = model.to_json()
-	with open("model.json", "w") as json_file:
-		json_file.write(model_json)
-	model.save("model.h5")
-	model.save_weights("model_weights.h5")
-	print("Saved model to disk")
-	#model.save_widths('models/augmented_30_epochs.h5')
-	# learning curves
-	summarizeDiagnostics(history)
+ 
 
-#showImages(dataSetNoDefectFolder,100,20)
-#showImages(dataSetNoDefectFolder)
-#showImages(dataSetDefectFolder)
-#prepareDataSetAsImage2("NoDefect",dataSetNoDefectFolder,"Defect",dataSetDefectFolder)
-runTrainTest()
+Fig. 3. filter example
 
-##---------------------------------------------------------------------------------------------------------------------------------------------
-# LOAD MODEL AND TEST DATASET IMAGES
-##---------------------------------------------------------------------------------------------------------------------------------------------
-def load_image(img_path, show=False):
-	# (height, width, channels)
-    img = image.load_img(img_path, target_size=(imageHeight, imageWidth, 3))
-	 # (1, height, width, channels), add a dimension because the model expects this shape: (batch_size, height, width)   
-    img_tensor = image.img_to_array(img)                    
-    img_tensor = np.expand_dims(img_tensor, axis=0)                                                                                                                                                                                                        # channels)
-    img_tensor /= 255. 
-    if show:
-        pyplot.imshow(img_tensor[0])                           
-        pyplot.axis('off')
-        pyplot.show()
-    return img_tensor
-#load model from saved folder
-model = load_model("model.h5")
-image_folder = "dataset/test/Defect/"
-defect_count = 0
-nodefect_count = 0
-#load test dataset images and show result
-for image_full_name in os.listdir(image_folder):
-	filename = image_folder + image_full_name
-	new_image = load_image(filename)
-	pred = model.predict(new_image)
-	if pred > 0.5:
-		nodefect_count += 1
-		pred_int = 1
-	else:
-		defect_count += 1
-		pred_int = 0
-	result = Categories[pred_int]
-	print(image_full_name,pred,pred_int,result)
+ 
 
-print("Defect: " + str(defect_count))
-print("NoDefect: " + str(nodefect_count))
+Fig. 4. The Convolution operation. The output matrix is called Convolved Feature or Feature Map
+
+Then, the Convolution of the 5 x 5 image and the 3 x 3 matrix can be computed as shown in the animation in Figure 4.
+
+In CNN terminology, the 3×3 matrix is called a ‘filter’ or ‘kernel’ or ‘feature detector’ and the matrix formed by sliding the filter over the image and computing the dot product is called the ‘Convolved Feature’ or ‘Activation Map’ or the ‘Feature Map‘. It is important to note that filters acts as feature detectors from the original input image
+
+C.Introducing Non Linearity (ReLU)
+An additional operation called ReLU has been used after every Convolution operation in Figure 1 above. ReLU stands for Rectified Linear Unit and is a non-linear operation.
+
+
+
+Fig. 5. The ReLU operation
+
+ReLU is an element wise operation (applied per pixel) and replaces all negative pixel values in the feature map by zero. The purpose of ReLU is to introduce non-linearity in our ConvNet, since most of the real-world data we would want our ConvNet to learn would be non-linear (Convolution is a linear operation – element wise matrix multiplication and addition, so we account for non-linearity by introducing a non-linear function like ReLU).
+
+ Fig. 6. The ReLU operation result on image
+
+Other nonlinear functions such as tanh or sigmoid can also be used instead of ReLU, but ReLU has been found to perform better in most situations.
+
+D.The Pooling Step
+Spatial Pooling (also called subsampling or down sampling) reduces the dimensionality of each feature map but retains the most important information. Spatial Pooling can be of different types: Max, Average, Sum etc.
+
+ 
+
+In case of Max Pooling, we define a spatial neighborhood (for example, a 2×2 window) and take the largest element from the rectified feature map within that window. Instead of taking the largest element we could also take the average (Average Pooling) or sum of all elements in that window. In practice, Max Pooling has been shown to work better.
+
+
+
+Fig. 7. Max Pooling.
+
+Slided our 2 x 2 window by 2 cells (also called ‘stride’) and take the maximum value in each region. As shown in Figure 7, this reduces the dimensionality of our feature map.
+
+ 
+
+Fig. 8. Pooling applied to Rectified Feature Maps
+
+In the network shown in Figure 8, pooling operation is applied separately to each feature map (notice that, due to this, we get three output maps from three input maps).
+
+
+
+Fig. 9. Max Pooling
+
+Figure 9 shows the effect of Pooling on the Rectified Feature Map we received after the ReLU operation in Figure 6 above. The function of Pooling is to progressively reduce the spatial size of the input representation
+
+E.Fully Connected Layer
+The Fully Connected layer is a traditional Multi-Layer Perceptron that uses a softmax activation function in the output layer. The term “Fully Connected” implies that every neuron in the previous layer is connected to every neuron on the next layer.
+
+ Fig. 10. Fully Connected Layer -each node is connected to every other node in the adjacent layer
+
+The output from the convolutional and pooling layers represent high-level features of the input image. The purpose of the Fully Connected layer is to use these features for classifying the input image into various classes based on the training dataset. For example, the image classification task we set out to perform has four possible outputs as shown in Figure 10.
+
+
+
+Fig. 11. Visualizing Convolutional Neural Networks
+
+III.Fabrıc defect dedectıon
+
+Fig. 12. Classification of defect detection methods [10]
+
+ 
+
+Fig. 13. Summary of detection success rates of previous methods in statistical approach [1]
+
+A.Aitex Fabric Image Database
+
+
+Fig. 14. Example of fabric defect [10]
+
+The textile fabric database consists of 245 images of 7 different fabrics. There are 140 defect-free images, 20 for each type of fabric. With different types of defects, there are 105 images.
+
+ 
+
+Images have a size of 4096×256 pixels. Defective images have been denominated as follows: nnnn_ddd_ff.png, where nnnn  is the image number, ddd is the defect code, and ff is the fabric code.
+
+ 
+
+There is a mask of defect, denominated as: nnnn_ddd_ff_mask.png, where white pixels represent the defect area of the defective image.
+
+ 
+
+B.Use Cnn for  Detect Detection
+ Fig. 15. The architecture of the new convolutional neural network. [2]
+
+ 
+
+ 
+
+C.Result of Cnn Model
+ Fig. 16. Convolutional Neural Networks Model.
+
+In application with limited training data, transfer learning has been considered as a good solution. Transferring the fixed weights will obtain a good performance, when the source and target domains are similar.
+
+ 
+
+ Fig. 17. Result of Convolutional Neural Networks Model.
+
+ 
+
+
+
+Fig. 18. Result of Convolutional Neural Networks Model.
+
+Created cnn model to detect fabric defect in figure 16. After train calculated loss an accuracy for train and test dataset.  Train loss show as orange color and test loss show as blue color in figure 17. Train accuracy show as orange color and test accuracy show as blue color in figure 17.
+
+Learning is firstly successful so train and test dataset accuracy is about 80% while epoch is 250. After epoch is 250, learning is slowly go up.
+
+There is a dataset which is aitex fabric dataset for fabric detect. There is some article about fabric detection with convolution neural networks.
+
+D.References
+Ngan, H. Y. T., et al. (2011). "Automated fabric defect detection—A review." Image and Vision Computing 29(7): 442-458
+Ouyang, W., et al. (2019). Fabric Defect Detection Using Activation Layer Embedded Convolutional Neural Network. 7: 70130-70140.
+Schneider, D., et al. (2012). A vision based system for high precision online fabric defect detection, IEEE: 1494-1499.
+Shuang, M., et al. (2018). "Automatic Fabric Defect Detection with a Multi-Scale Convolutional Denoising Autoencoder Network Model." Sensors (14248220) 18(4): 1064.
+Sun, J., et al. (2019). "Surface Defects Detection Based on Adaptive Multiscale Image Collection and Convolutional Neural Networks." IEEE Transactions on Instrumentation and Measurement, Instrumentation and Measurement, IEEE Transactions on, IEEE Trans. Instrum. Meas. 68(12): 4787-4797.
+Wei, B., et al. (2019). A new method using the convolutional neural network with compressive sensing for fabric defect classification based on small sample sizes. 89: 3539-3555.
+Zhang, M., et al. (2019). Two-step Convolutional Neural Network for Image Defect Detection, Technical Committee on Control Theory, Chinese Association of Automation: 8525-8530.
+Zhao, Y., et al. (2019). "A Visual Long-short-term Memory Based Integrated CNN Model for Fabric Defect Image Classification." Neurocomputing.
+AITEX FABRIC IMAGE DATABASE
+ a  public fabric image database for defect detection. Javier Silvestre-Blanes, Teresa Albero-Albero, Ignacio Miralles, Rubén Pérez-Llorens, Jorge Moreno AUTEX Research Journal, No. 4, 2019
+ 
